@@ -1,4 +1,4 @@
-# Logbook / Dashboard Processor
+# procurement-processor
 This project consolidates a multi-step data processing workflow for Monthly Data Processing (previously a Monthly Loogbook for Excel) in Power BI for Procurement and Logistic Division MAA Group.
 
 ## Folder Structure
