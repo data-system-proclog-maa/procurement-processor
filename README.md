@@ -46,13 +46,13 @@ The pipeline is split into three main modules:
 
 ## Data Processing Highlight (Key Metrics)
 The pipeline performs the following complex calculations:
-+ Custom Date Difference: Calculates working days between two dates ($\text{PR} - \text{PO}, \text{PO} - \text{R PO}$) while excluding designated national holidays ($\text{lebaran\_dates}$).
++ Custom Date Difference: Calculates working days between two dates (`PR - PO`, `PO - RPO`) while excluding designated national holidays `lebaran_dates`.
 
-+ Dynamic Lead Time (TIME DATE): Calculates the required delivery deadline based on $\text{LOC}$, $\text{Item Category}$, and customized normalization rules ($\text{timedate\_normalized\_df}$).
++ Dynamic Lead Time (TIME DATE): Calculates the required delivery deadline based on `LOC`, `Item Category`, and customized normalization rules `timedate_normalized_df`.
 
-+ Purchasing Status: Classifies procurement performance ($\text{STATUS\_Purchasing}$) based on team-specific lead time thresholds (HO: 5 days, Site: 3 days).
++ Purchasing Status: Classifies procurement performance `STATUS_PURCHASING` based on team-specific lead time thresholds (HO: 5 days, Site: 3 days).
 
-+ Freight Determination: Determines $\text{LOGISTIC\_FREIGHT}$ using a hierarchy that prioritizes vendor-specific mapping before checking general rules, using efficient pre-computed maps.
++ Freight Determination: Determines `LOGISTIC_FREIGHT` using a hierarchy that prioritizes vendor-specific mapping before checking general rules, using efficient pre-computed maps.
 
 ## Prerequisites
 Python (3.10+) with the following libraries installed
