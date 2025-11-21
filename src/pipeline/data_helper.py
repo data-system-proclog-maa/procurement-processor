@@ -112,8 +112,8 @@ def TOP_strings(s):
     s = str(s).lower().strip()
     
     progressive_keywords = ['dp', 'downpayment', 'down payment', 'pembayaran 1 ', '50% sebelum', 'kredit', 'tahap', 'leasing', 'installment']
-    tbd_keywords = ['pembayaran sebelum', 'before delivery', 'sebelum pengiriman', 'cash', 'uang muka', '100% sebelum', 'tunai', 'seelum', 'sebeulm', 'transfer', 'pengiriman setelah pembayaran', 'setelah pembayaran']
-    tempo_keywords = ['hari setelah', 'hari dari', 'tempo', 'invoice diterima', 'penagihan dilakukan', 'setelah pengiriman', 'pembayaran setelah', 'kontrak', 'after delivery', 'hari kerja', 'telah diterima', 'pembayaran per bulan', 'ari', '0', 'pekerjaan pengujian dilakukan setelah pembayaran dilakukan', '100% di muka']
+    tbd_keywords = ['pembayaran sebelum', 'before delivery', 'sebelum pengiriman', 'cash', 'uang muka', '100% sebelum', 'tunai', 'seelum', 'sebeulm', 'transfer', 'pengiriman setelah pembayaran', 'setelah pembayaran','100% di muka']
+    tempo_keywords = ['hari setelah', 'hari dari', 'tempo', 'invoice diterima', 'penagihan dilakukan', 'setelah pengiriman', 'pembayaran setelah', 'kontrak', 'after delivery', 'hari kerja', 'telah diterima', 'pembayaran per bulan', 'ari', '0', 'pekerjaan pengujian dilakukan setelah pembayaran dilakukan']
     
     if any(keyword in s for keyword in progressive_keywords): return 'Progressive'
     if any(keyword in s for keyword in tbd_keywords): return 'TBD'
