@@ -1,5 +1,5 @@
 # procurement-processor
-This project consolidates a multi-step data processing workflow for Monthly Data Processing (previously a Monthly Loogbook for Excel) in Power BI for Procurement and Logistic Division MAA Group.
+This project consolidates a multi-step data processing workflow for Monthly Data Processing (previously a Monthly Logbook for Excel) in Power BI for Procurement and Logistic Division MAA Group.
 
 ## Folder Structure
 ```
@@ -12,7 +12,7 @@ PROCUREMENT-PROCESSOR/
 │   │   └── PO Manual PROCESS.xlsx # Manual PO, consolidate from Synology
 │   ├── processed/             # OUTPUT: Folder for processed data output
 │   │   └── output.xlsx          # Final output file (saved by the pipeline)
-│   └── reference/             # LOOKUP: Static lookup tables for normalization
+│   └── reference/             # LOOKUP: Static lookup tables for normalization (synced from Google Sheets)
 │       ├── cost_saving.xlsx
 │       ├── jasa_service.xlsx
 │       ├── logistic_freight.xlsx
@@ -21,6 +21,7 @@ PROCUREMENT-PROCESSOR/
 │       ├── ontime_normalisasi.xlsx # Used for PO Ontime Normalization
 │       ├── pulau.xlsx # Pulau lookup
 │       └── wilayah.xlsx # Wilayah lookup
+├── export/                    # OUTPUT: Excel export destination
 ├── output/                    # Legacy or secondary output folder
 └── src/                       # SOURCE CODE ROOT
     ├── legacy/                # Archive for old scripts/notebooks
@@ -29,8 +30,9 @@ PROCUREMENT-PROCESSOR/
     │   └── orchestrator.ipynb # Pipeline Entry Point
     ├── pipeline/              # CORE LOGIC PACKAGE
     │   ├── __init__.py          # Marks 'pipeline' as a Python package
-    │   └── data_helper.py       # (Helper functions, rules, freight logic)
-    │   └── data_loader.py       # (Path constants, data ingestion)
+    │   ├── data_export.py       # (Excel export functionality)
+    │   ├── data_helper.py       # (Helper functions, rules, freight logic)
+    │   ├── data_loader.py       # (Path constants, data ingestion from GSheets)
     │   └── processing_steps.py  # (Sequential transformation workflow)
     └── README.md              # Project documentation
 ```
@@ -39,7 +41,8 @@ PROCUREMENT-PROCESSOR/
 The pipeline is split into three main modules:
 | Module | Responsibility | 
 | ------------- | ------------- |
-|` data_loader.py`  | Data ingestion and path management. `PO Entry List` & `data/reference`  |
+|` data_loader.py`  | Data ingestion and path management. Loads `PO Entry List` & reference data from Google Sheets  |
+|` data_export.py`  | Data export. Handles saving processed data to Excel in the `export/` directory |
 |` data_helper.py`| Core Business Rules & Utilities. Encapsulates all non-sequential logic, such as complex string parsers, date difference calculations, team definitions, and efficiency-optimized dictionary mappings. eg.`VALUE`,  `LOC`, `DEPARTMENT_`, `DIVISI`, & `Lebaran Exclusion Date`  |
 |`processing_steps.py` | Sequential Workflow Engine. Run all of the processing from `data_helper.py` and calculate other business metrics |
 |`orchestrator.ipynb` | Pipeline Entry Point. Serves as execution |
@@ -53,6 +56,8 @@ The pipeline performs the following complex calculations:
 + Purchasing Status: Classifies procurement performance `STATUS_PURCHASING` based on team-specific lead time thresholds (HO: 5 days, Site: 3 days).
 
 + Freight Determination: Determines `LOGISTIC_FREIGHT` using a hierarchy that prioritizes vendor-specific mapping before checking general rules, using efficient pre-computed maps.
+
++ Automated Export: Automatically exports the processed data to a timestamped Excel file in the `export/` folder for easy archiving and sharing.
 
 ## Prerequisites
 Python (3.10+) with the following libraries installed
