@@ -6,7 +6,41 @@ project_root = '../../'
 raw_dir = os.path.join(project_root, 'data', 'po_entry') 
 reference_dir = os.path.join(project_root, 'data', 'reference')
 
-ontime_norm_path = os.path.join(reference_dir, 'ontime_normalisasi.xlsx')
+
+sheet_id = '1EZ7kPPvnRqvR5UN0Vi0NNLpLTNXEArzRklsVTIGb1vc'
+exportformat = 'gviz/tq?tqx=out:csv&gid='
+
+
+normalisasi_rfm_id = '0'
+normalisasi_po_id = '1138035324'
+notcounted_po_id = '2061221686'
+normalisasi_logistic_id = '822694285'
+nonworkdays_id = '632183983'
+wilayah_id = '723767888'
+pulau_id = '410190247'
+timedate_id = '1205634597'
+cost_saving_id = '1828930868'
+jasa_service_id = '1312001151'
+freight_id = '1063908444'
+rara_id = '394331579'
+ryi_id = '2095297594'
+way_id = '532810996'
+
+
+normalisasi_rfm_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_rfm_id}'
+normalisasi_po_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_po_id}'
+notcounted_po_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{notcounted_po_id}'
+normalisasi_logistic_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_logistic_id}'
+nonworkdays_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{nonworkdays_id}'
+wilayah_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{wilayah_id}'
+pulau_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{pulau_id}'
+timedate_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{timedate_id}'
+cost_saving_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{cost_saving_id}' 
+jasa_service_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{jasa_service_id}'
+freight_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{freight_id}'
+rara_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{rara_id}'
+ryi_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{ryi_id}'
+way_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{way_id}'
 
 def load_all_data():
     
@@ -17,22 +51,22 @@ def load_all_data():
         data['df'] = pd.read_excel(os.path.join(raw_dir, "PO Entry List.xlsx"))
 
         # 2. Load Reference Files 
-        data['holidays_df'] = pd.read_excel(os.path.join(reference_dir, 'non_workdays.xlsx'))
-        data['wilayah_df'] = pd.read_excel(os.path.join(reference_dir, 'wilayah.xlsx'))
-        data['pulau_df'] = pd.read_excel(os.path.join(reference_dir, 'pulau.xlsx'))
-        data['jasa_service_df'] = pd.read_excel(os.path.join(reference_dir, 'jasa_service.xlsx'))
-        data['cost_saving_df'] = pd.read_excel(os.path.join(reference_dir, 'cost_saving.xlsx'))
+        data['holidays_df'] = pd.read_csv(nonworkdays_path)
+        data['wilayah_df'] = pd.read_csv(wilayah_path)
+        data['pulau_df'] = pd.read_csv(pulau_path)
+        data['jasa_service_df'] = pd.read_csv(jasa_service_path)
+        data['cost_saving_df'] = pd.read_csv(cost_saving_path)
     
-        logistic_freight_path = os.path.join(reference_dir, 'logistic_freight.xlsx')
-        data['freight_df'] = pd.read_excel(logistic_freight_path, sheet_name="Freight")
-        data['rara_df'] = pd.read_excel(logistic_freight_path, sheet_name="RARA")
-        data['ryi_df'] = pd.read_excel(logistic_freight_path, sheet_name="RYI")
+        data['freight_df'] = pd.read_csv(freight_path)
+        data['rara_df'] = pd.read_csv(rara_path)
+        data['ryi_df'] = pd.read_csv(ryi_path)
+        data['way_df'] = pd.read_csv(way_path)
     
-        data['picnorm_df'] = pd.read_excel(os.path.join(reference_dir, 'normalisasi.xlsx'))    
-        data['ontime_normalized_df'] = pd.read_excel(ontime_norm_path, sheet_name = 'normalized')
-        data['timedate_normalized_df'] = pd.read_excel(ontime_norm_path, sheet_name ='timedate')
-        data['notcounted_df'] = pd.read_excel(ontime_norm_path, sheet_name = 'notcalculated')
-        data['logistic_normalized_df'] = pd.read_excel(ontime_norm_path, sheet_name = 'logistic_normalized')
+        data['picnorm_df'] = pd.read_csv(normalisasi_rfm_path) 
+        data['ontime_normalized_df'] = pd.read_csv(normalisasi_po_path) 
+        data['timedate_normalized_df'] = pd.read_csv(timedate_path)
+        data['notcounted_df'] = pd.read_csv(notcounted_po_path)
+        data['logistic_normalized_df'] = pd.read_csv(normalisasi_logistic_path)
 
         # Return data
         return data

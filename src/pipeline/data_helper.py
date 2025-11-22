@@ -260,8 +260,8 @@ def days_excluding_lebaran(start_date, end_date):
     if pd.isnull(start_date) or pd.isnull(end_date):
         return np.nan
 
-    start_d = pd.to_datetime(start_date).date()
-    end_d = pd.to_datetime(end_date).date()
+    start_d = pd.to_datetime(start_date, dayfirst=True).date()
+    end_d = pd.to_datetime(end_date, dayfirst=True).date()
 
     if start_d == end_d:
         return 0

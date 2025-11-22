@@ -12,7 +12,7 @@ from data_helper import (
 )
 
 def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_service_df, 
-                       freight_df, rara_df, ryi_df, 
+                       freight_df, rara_df, ryi_df, way_df,
                        cost_saving_df, timedate_normalized_df, 
                        ontime_normalized_df, notcounted_df, logistic_normalized_df):
     """
@@ -214,6 +214,7 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     # Pre-compute RARA/RYI PO-to-Freight Type Mappings
     rara_map = rara_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
     ryi_map = ryi_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
+    way_map = way_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
 
     df['LOGISTIC_FREIGHT'] = np.where(
         df['Item Category'] == 'Jasa Logistik', 

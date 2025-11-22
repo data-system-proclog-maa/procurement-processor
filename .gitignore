@@ -4,7 +4,7 @@ data/po_entry/PO Entry List.xlsx
 data/po_entry/PO Manual PROCESS.xlsx
 data/processed/output.xlsx
 
-output/
+export/
 
 pycache/
 *.pyc
