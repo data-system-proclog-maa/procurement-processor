@@ -1,4 +1,3 @@
-import pandas as pd
 import os
 import datetime
 
@@ -19,7 +18,7 @@ def export_data(df, filename=None):
             print(f"Created export directory at: {os.path.abspath(export_dir)}")
         except OSError as e:
             print(f"Error creating export directory: {e}")
-            return
+            return None
 
     if filename is None:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -38,6 +37,7 @@ def export_data(df, filename=None):
     except Exception as e:
         print(f"Failed to export data: {e}")
         return None
+    return None
 
 if __name__ == '__main__':
     print("data_export.py is a utility module. Functions defined.")

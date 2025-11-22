@@ -218,7 +218,7 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
 
     df['LOGISTIC_FREIGHT'] = np.where(
         df['Item Category'] == 'Jasa Logistik', 
-        df.apply(determine_freight, axis=1, args=(freight_mapping, rara_map, ryi_map)), 
+        df.apply(determine_freight, axis=1, args=(freight_mapping, rara_map, ryi_map, way_map)), 
         ''
     )
     
