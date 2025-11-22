@@ -37,7 +37,6 @@ def export_data(df, filename=None):
     except Exception as e:
         print(f"Failed to export data: {e}")
         return None
-    return None
 
 if __name__ == '__main__':
     print("data_export.py is a utility module. Functions defined.")
