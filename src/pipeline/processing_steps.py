@@ -363,10 +363,12 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     category_l = df['CATEGORYMERGED'].str.lower().fillna('')
     item_name_l = df['Item Name'].str.lower().fillna('')
     pic_name_l = df['Procurement Name'].str.strip().fillna('').str.lower()
+    supplier_name_l = df['Supplier'].str.strip().fillna('').str.lower()
+    requisition_type_l = df['Requisition Type'].str.strip().fillna('').str.lower()
 
     df['_Routine'] = df['Routine']
 
-    df['_Routine'] = apply_routine_logic(df['_Routine'], category_l, item_name_l, pic_name_l)
+    df['_Routine'] = apply_routine_logic(df['_Routine'], category_l, item_name_l, pic_name_l, requisition_type_l, supplier_name_l)
 
     # 20. On time unnormalized
     print("pulling unnormalized on time%...")

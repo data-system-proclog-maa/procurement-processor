@@ -165,14 +165,15 @@ def category_value_xcmg(row):
     return 0
 
 #override routine with parameter inside
-def apply_routine_logic(df_series_routine, category_series, item_name_series, pic_name_series):
+def apply_routine_logic(df_series_routine : pd.Series, category_series : pd.Series, item_name_series : pd.Series, pic_name_series : pd.Series, requisition_type_series : pd.Series, supplier_name_series : pd.Series):
     """
-    Applies the complex, multi-rule categorization logic to determine if an item is '_Routine'.
+    normalization for routine column based on aggred terms
     
-    :param df_series_routine: The initial 'Routine' column Series (used as a base).
+    :param df_series_routine: initial data frame
     :param category_series: The 'CATEGORYMERGED' (lowercase) Series.
     :param item_name_series: The 'Item Name' (lowercase) Series.
     :param pic_name_series: The 'Procurement Name' (lowercase) Series.
+    :param requisition_type_series: The 'Requisition Type' (lowercase) Series.
     :return: The updated '_Routine' status Series.
     """
     df_series_routine = df_series_routine.copy()
@@ -184,28 +185,145 @@ def apply_routine_logic(df_series_routine, category_series, item_name_series, pi
     
     #define rules as a list of (condition_mask, value)
     rules = [
-        ((category_series == 'aksesoris kendaraan') & (item_name_series.str.contains('lampu rotary', na=False)), 'Routine'),
-        ((category_series == 'alat hiburan') & (item_name_series.str.contains('shuttlecock|cock', na=False)), 'Routine'),
-        ((category_series == 'apd') & (item_name_series.str.contains('helm|kacamata|kaca mata|rompi|masker medis|safety shoes|tali|backsupport', na=False)), 'Routine'),
+        # ---------------------------------------------------------
+        # fix price contract 
+        # ---------------------------------------------------------
+        (
+            (requisition_type_series == 'contract (fix price)'),
+            'Routine'
+        ),
+
+        # ---------------------------------------------------------
+        # aksesoris kendaraan
+        # ---------------------------------------------------------
+        (
+            (category_series == 'aksesoris kendaraan') &
+            (item_name_series.str.contains('lampu rotary', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'aksesoris kendaraan') &
+            (~item_name_series.str.contains('lampu rotary', na=False)),
+            'Non-Routine'
+        ),
+
+        # ---------------------------------------------------------
+        ( (category_series == 'alat hiburan') &
+          (item_name_series.str.contains('shuttlecock|cock', na=False)),
+          'Routine'
+        ),
+
+        ( (category_series == 'apd') &
+          (item_name_series.str.contains('helm|kacamata|kaca mata|rompi|masker medis|safety shoes|tali|backsupport', na=False)),
+          'Routine'
+        ),
+
         (category_series == 'cetak', 'Non-Routine'),
         (category_series == 'container & part', 'Non-Routine'),
-        ((category_series == 'elektrikal') & (pic_name_series.isin(nonroutine_pics)), 'Non-Routine'),
-        ((category_series == 'karoseri ft') & (item_name_series.str.contains('filter', na=False)), 'Routine'),
-        ((category_series == 'karoseri ft') & (~item_name_series.str.contains('filter', na=False)), 'Non-Routine'),
+
+        (
+            (category_series == 'elektrikal') & (pic_name_series.isin(nonroutine_pics)),
+            'Non-Routine'
+        ),
+
+        # ---------------------------------------------------------
+        # karoseri ft
+        # ---------------------------------------------------------
+        (
+            (category_series == 'karoseri ft') &
+            (item_name_series.str.contains('filter', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'karoseri ft') &
+            (~item_name_series.str.contains('filter', na=False)),
+            'Non-Routine'
+        ),
+
         (category_series == 'karoseri lt', 'Non-Routine'),
         (category_series == 'peralatan dapur', 'Non-Routine'),
-        ((category_series == 'peralatan shipping') & (item_name_series.str.contains('terpal', na=False)), 'Routine'),
-        ((category_series == 'peralatan shipping') & (~item_name_series.str.contains('terpal', na=False)), 'Non-Routine'),
-        ((category_series == 'peralatan survey') & (item_name_series.str.contains('flagging tape', na=False)), 'Routine'),
-        ((category_series == 'peralatan survey') & (~item_name_series.str.contains('flagging tape', na=False)), 'Non-Routine'),
+
+        # ---------------------------------------------------------
+        # peralatan shipping
+        # ---------------------------------------------------------
+        (
+            (category_series == 'peralatan shipping') &
+            (item_name_series.str.contains('terpal', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'peralatan shipping') &
+            (~item_name_series.str.contains('terpal', na=False)),
+            'Non-Routine'
+        ),
+
+        # ---------------------------------------------------------
+        # peralatan survey
+        # ---------------------------------------------------------
+        (
+            (category_series == 'peralatan survey') &
+            (item_name_series.str.contains('flagging tape', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'peralatan survey') &
+            (~item_name_series.str.contains('flagging tape', na=False)),
+            'Non-Routine'
+        ),
+
+        # ---------------------------------------------------------
+        # lab peralatan
+        # ---------------------------------------------------------
+        (
+            (category_series == 'lab peralatan') &
+            (item_name_series.str.contains('oreas|plastik klip', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'lab peralatan') &
+            (~item_name_series.str.contains('oreas|plastik klip', na=False)),
+            'Non-Routine'
+        ),
+
+        # ---------------------------------------------------------
+        # oli dan grease 
+        # ---------------------------------------------------------
+        (
+            (category_series == 'oli dan grease') &
+            (supplier_name_series.str.contains('toko sulawesi|pt satrya reksa binaguna', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'oli dan grease') &
+            (~supplier_name_series.str.contains('toko sulawesi|pt satrya reksa binaguna', na=False)),
+            'Non-Routine'
+        ),
+
         (category_series == 'telepon', 'Non-Routine'),
         (category_series == 'tire dt', 'Routine'),
-        ((category_series == 'tire innova') & (item_name_series.str.contains('delium', na=False)), 'Routine'),
-        ((category_series == 'tire manhaul') & (item_name_series.str.contains('gt|gajah tunggal', na=False)), 'Routine'),
+        (category_series == 'perangkat it', 'Non-Routine'),
+        (category_series == 'jasa/service', 'Non-Routine'),
+        (category_series == 'mesin bor dan part', 'Non-Routine'),
+        (category_series == 'alat teknik', 'Non-Routine'),
+        (category_series == 'mesin epsilon dan part', 'Non-Routine'),
+        (category_series == 'container dan part', 'Non-Routine'),
+        (category_series == 'telephone/hp', 'Non-Routine'),
+
+        (
+            (category_series == 'tire innova') &
+            (item_name_series.str.contains('delium', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series == 'tire manhaul') &
+            (item_name_series.str.contains('gt|gajah tunggal', na=False)),
+            'Routine'
+        ),
+
         (category_series == 'tire tl', 'Non-Routine'),
         (category_series == 'tire vb', 'Routine'),
         (category_series == 'radio ht, rig', 'Non-Routine'),
-        (category_series == 'packaging', 'Routine')
+        (category_series == 'packaging', 'Routine'),
     ]
     
     #apply all rules sequentially 
@@ -278,7 +396,7 @@ def days_excluding_lebaran(start_date, end_date):
         return non_lebaran_days
 
 #freight type
-def determine_freight(row, freight_mapping, rara_map, ryi_map):
+def determine_freight(row, freight_mapping, rara_map, ryi_map, way_map):
     supplier = row['Supplier']
     po_number = row['PO Number']
 
@@ -295,6 +413,10 @@ def determine_freight(row, freight_mapping, rara_map, ryi_map):
     if "RYI" in supplier.upper():
         freight_type = ryi_map.get(po_number)
         return freight_type if pd.notnull(freight_type) else "Unknown RYI Freight"
+    
+    if "WAY" in supplier.upper():
+        freight_type = way_map.get(po_number)
+        return freight_type if pd.notnull(freight_type) else "Unknown WAY Freight"
         
     return "Other Freight"
 
