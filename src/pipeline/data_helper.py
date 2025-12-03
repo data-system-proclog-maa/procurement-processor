@@ -452,7 +452,7 @@ def calculate_purchasing_status(procurement_name_series, duration_series):
     """
     
     #Define team members (Core Business Rule)
-    ho_team = ['Linda / Puji / Syifa R / Stheven', 'Syifa Ramadhani', 'Syifa Alifia', 'Rizal Agus Fianto', 'Auriel', 'Puji Astuti', 'Linda Permata Sari', 'Laurensius Adi', 'Syifa Ramadhani Luthfi']
+    ho_team = ['Linda / Puji / Syifa R / Stheven', 'Syifa Ramadhani', 'Syifa Alifia', 'Rizal Agus Fianto', 'Auriel', 'Puji Astuti', 'Linda Permata Sari', 'Laurensius Adi', 'Syifa Ramadhani Luthfi', 'Stheven Immanuel']
     site_team = ['Rona / Joko', 'Joko', 'Victo', 'Rakan', 'Rona Justhafist', 'Rona / Victo / Rakan / Joko', 'Fairus / Irwan', 'Fairus Mubakri', 'Irwan', 'Ady', 'Fairus / Ady', 'Olvan']
 
     #Create boolean masks for each team

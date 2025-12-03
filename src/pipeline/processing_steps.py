@@ -31,7 +31,7 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
         'Received TL Date', 'PO Required Date'
     ]
     for col in date_columns:
-        df[col] = pd.to_datetime(df[col], errors='coerce')
+        df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
 
     # Extract holiday dates for busday_count (Pythonic variable naming used here)
     holidays = pd.to_datetime(holidays_df['NONWORKDAYS'], format='%d/%m/%Y').dt.date.tolist()
@@ -61,8 +61,8 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     used_required_date = df['Updated Requisition Required Date'].fillna(df['Requisition Required Date'])
 
     # D. Convert final selected dates to datetime objects for calculations
-    used_approved_date = pd.to_datetime(used_approved_date, errors='coerce')
-    used_required_date = pd.to_datetime(used_required_date, errors='coerce')
+    used_approved_date = pd.to_datetime(used_approved_date, errors='coerce', dayfirst=True)
+    used_required_date = pd.to_datetime(used_required_date, errors='coerce', dayfirst=True)
 
     # Apply helpers for LOC, LEAD TIME, URGENT/NORMAL flags
     df['LOC'] = df['Department'].apply(LOC_strings)
@@ -136,11 +136,11 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
         & (~df['Item Category'].isin(['Jasa Logistik', 'Solar']))
     )
     
-    # Calculate time differences using apply and helper functions
-    df['PR - PO'] = pd.Series(  # <--- pd.Series starts here
+    # Calculate time differences using apply and helper functions (with normalized data)
+    df['PR - PO'] = pd.Series(
         np.where(
             is_calculable, 
-            df.apply(lambda row: days_excluding_lebaran(row['Updated Requisition Approved Date'], row['PO Submit Date']), axis=1), 
+            df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Submit Date']), axis=1), 
             np.nan
         )).clip(lower=0)
     
@@ -198,7 +198,7 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     
     df['Purchasing_Duration'] = np.where(
         is_calculable, 
-        df.apply(lambda row: days_excluding_lebaran(row['Updated Requisition Approved Date'], row['PO Approval Date']), axis=1),
+        df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Approval Date']), axis=1),
         np.nan
     )
 
