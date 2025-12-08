@@ -1,0 +1,5 @@
+configurations:
+  - id: default_python_config
+    name: Default Python Quality Profile
+    description: Recommended quality profile for all Python projects.
+    qodanaYaml: configs/python-qa-config.yaml
