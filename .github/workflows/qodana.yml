@@ -1,0 +1,36 @@
+name: Qodana Configuration Upload
+
+# Define the events that trigger this workflow
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Define the jobs to be executed
+jobs:
+  upload-qodana-config:
+    # Specify the runner environment
+    runs-on: ubuntu-latest
+    
+    # Steps for the job
+    steps:
+      - name: Checkout repository
+        # Action to check out your repository code
+        uses: actions/checkout@v4
+
+      - name: Run Qodana Configuration Uploader
+        # Environment variables for the Qodana upload step
+        env:
+          QODANA_CONFIGURATIONS_TOKEN: ${{ secrets.QODANA_CONFIGURATIONS_TOKEN }}
+          QODANA_ENDPOINT: 'https://qodana.cloud'
+        
+        # The command to run the Qodana Configuration Uploader via Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e QODANA_CONFIGURATIONS_TOKEN=${QODANA_CONFIGURATIONS_TOKEN} \
+            jetbrains/qodana-configuration-uploader:latest \
+            --global-configs-file qodana-global-configurations.yaml
