@@ -1,0 +1,11 @@
+version: 1.0
+linter: jetbrains/qodana-python:latest  
+
+
+profile:
+  name: qodana.recommended
+
+bootstrap: |
+  pip install -r requirements.txt
+
+failThreshold: 0
