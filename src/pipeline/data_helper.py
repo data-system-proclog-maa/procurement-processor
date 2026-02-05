@@ -415,6 +415,10 @@ def determine_freight(row, freight_mapping, rara_map, ryi_map, way_map):
     if "WAY" in supplier.upper():
         freight_type = way_map.get(po_number)
         return freight_type if pd.notnull(freight_type) else "Unknown WAY Freight"
+
+    if supplier.upper() == "PT SYAMSUDDIN LOGISTIK NUSANTARA":
+        freight_type = sln_map.get(po_number)
+        return freight_type if pd.notnull(freight_type) else "Unknown SLN Freight"
         
     return "Other Freight"
 
