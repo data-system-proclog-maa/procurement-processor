@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-import os
-import math
+
 #Import all necessary helper functions from the helpers module
 from data_helper import (
     LOC_strings, project_string, divisi_string, PTCV_strings, TOP_strings, 
@@ -215,10 +214,11 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     rara_map = rara_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
     ryi_map = ryi_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
     way_map = way_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
+    sln_map = sln_df.drop_duplicates(subset=['PO Number']).set_index('PO Number')['Freight Type'].to_dict()
 
     df['LOGISTIC_FREIGHT'] = np.where(
         df['Item Category'] == 'Jasa Logistik', 
-        df.apply(determine_freight, axis=1, args=(freight_mapping, rara_map, ryi_map, way_map)), 
+        df.apply(determine_freight, axis=1, args=(freight_mapping, rara_map, ryi_map, way_map, sln_map)), 
         ''
     )
     
@@ -226,8 +226,8 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     df['USED RECEIVE DATE'] = df['Receive PO Date'].fillna(df['Received TL Date'])
     
     df['REC'] = np.where(df['VALUE'] == 1, 
-                         df.apply(lambda row: days_excluding_lebaran(row['FARTHEST REQUIRED DATE'], row['USED RECEIVE DATE']), axis=1), 
-                         np.nan)
+        df.apply(lambda row: days_excluding_lebaran(row['FARTHEST REQUIRED DATE'], row['USED RECEIVE DATE']), axis=1), 
+        np.nan)
     
     df['STATUS REC'] = np.where(
         df['REC'].isna(), 

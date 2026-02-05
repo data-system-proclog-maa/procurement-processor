@@ -25,6 +25,7 @@ freight_id = '1063908444'
 rara_id = '394331579'
 ryi_id = '2095297594'
 way_id = '532810996'
+sln_id = '744466142'
 
 
 normalisasi_rfm_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_rfm_id}'
@@ -41,6 +42,7 @@ freight_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat
 rara_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{rara_id}'
 ryi_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{ryi_id}'
 way_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{way_id}'
+sln_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{sln_id}'
 
 def load_all_data():
     
@@ -61,6 +63,7 @@ def load_all_data():
         data['rara_df'] = pd.read_csv(rara_path)
         data['ryi_df'] = pd.read_csv(ryi_path)
         data['way_df'] = pd.read_csv(way_path)
+        data['sln_df'] = pd.read_csv(sln_path)
     
         data['picnorm_df'] = pd.read_csv(normalisasi_rfm_path) 
         data['ontime_normalized_df'] = pd.read_csv(normalisasi_po_path) 
