@@ -10,8 +10,8 @@ from data_helper import (
     calculate_purchasing_status
 )
 
-def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_service_df, 
-                       freight_df, rara_df, ryi_df, way_df,
+def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays_df, wilayah_df, pulau_df, jasa_service_df, 
+                       freight_df, rara_df, ryi_df, way_df, sln_df,
                        cost_saving_df, timedate_normalized_df, 
                        ontime_normalized_df, notcounted_df, logistic_normalized_df):
     """
@@ -35,8 +35,11 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     # Extract holiday dates for busday_count (Pythonic variable naming used here)
     holidays = pd.to_datetime(holidays_df['NONWORKDAYS'], format='%d/%m/%Y').dt.date.tolist()
     
-    # Prepare picnorm_df (Normalization data for Requisition Approved/Required Dates)
-    picnorm_indexed = picnorm_df.drop_duplicates(subset='Requisition Number').set_index('Requisition Number')
+    # Prepare rfm_normalized_df (Normalization data for Requisition Approved/Required Dates)
+    rfm_normalized_indexed = rfm_normalized_df.drop_duplicates(subset='Requisition Number').set_index('Requisition Number')
+
+    # Prepare solar normalized df (Normalization for solar requisition)
+    solar_normalized_indexed = normalisasi_rfm_solar_df.drop_duplicates(subset=['Requisition Number', 'PO Number']).set_index(['Requisition Number', 'PO Number'])
 
 
     # --- Step 1: Initial Feature Engineering ---
@@ -45,12 +48,30 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     # A. Extract date from Req Progress Status using the helper function
     df['Extracted Approved Date'] = df['Req Progress Status'].apply(extract_finalisasi_date)
 
-    # B. Map dates from picnorm
-    df['Updated Requisition Approved Date'] = df['Requisition Number'].map(picnorm_indexed['Updated Requisition Approved Date'])
-    df['Updated Requisition Required Date'] = df['Requisition Number'].map(picnorm_indexed['Updated Requisition Required Date'])
-    df['Background Update'] = df['Requisition Number'].map(picnorm_indexed['Background Update'])
+    # B.1 Map dates from rfm_normalized (normalisasi RFM)
+    df['Updated Requisition Approved Date'] = df['Requisition Number'].map(rfm_normalized_indexed['Updated Requisition Approved Date'])
+    df['Updated Requisition Required Date'] = df['Requisition Number'].map(rfm_normalized_indexed['Updated Requisition Required Date'])
+    df['Background Update'] = df['Requisition Number'].map(rfm_normalized_indexed['Background Update'])
 
-    # C. Apply Priority Logic from normalization (Highest: picnorm -> Second: Extracted -> Lowest: Original)
+    # B. 2. Map dates from solar normalized (normalisasi RFM) and update existing columns
+    # fill normalization from df to main df
+    # Use fillna to ensure we only update where a match is found (priority to Solar)
+    
+    indexer = df.set_index(['Requisition Number', 'PO Number']).index
+    
+    # helper to map and fill
+    def map_and_fill(target_col):
+        mapped_values = indexer.map(solar_normalized_indexed[target_col])
+        # Convert index result to Series to allow fillna with another Series
+        return pd.Series(mapped_values, index=df.index).fillna(df[target_col])
+
+    df['Updated Requisition Approved Date'] = map_and_fill('Updated Requisition Approved Date')
+    df['Updated Requisition Required Date'] = map_and_fill('Updated Requisition Required Date')
+    
+    if 'Background Update' in solar_normalized_indexed.columns:
+        df['Background Update'] = map_and_fill('Background Update')
+
+    # C. Apply Priority Logic from normalization (Highest: rfm_normalized -> Second: Extracted -> Lowest: Original)
     used_approved_date = (
         df['Updated Requisition Approved Date']
         .combine_first(df['Extracted Approved Date'])
@@ -105,7 +126,7 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     df['CATEGORYVALUEXCMG'] = df.apply(category_value_xcmg, axis=1)
     df['VALUE'] = 1
     
-    # Logic to set 'VALUE' to 0 for POs with certain categories
+    # specific item within category is not calculated, calculated item is with 1 
     df.loc[df.groupby("PO Number")["CATEGORYVALUE"].transform("max") == 1, "VALUE"] = 0
     df.loc[df.groupby("PO Number")["CATEGORYVALUEXCMG"].transform("max") == 1, "VALUE"] = 0
     
@@ -129,10 +150,18 @@ def run_all_processing(df, picnorm_df, holidays_df, wilayah_df, pulau_df, jasa_s
     df['TIME DATE'] = used_approved_date + pd.to_timedelta(final_days_to_add, unit='D')
     
     # Condition mask for time-based calculations
+    
+    # Exclude Jasa Logistik
+    # Include Solar ONLY IF PO Approval Date year >= 2026
+    is_valid_category = (
+        (df['Item Category'] != 'Jasa Logistik') & 
+        ( (df['Item Category'] != 'Solar') | (df['PO Approval Date'].dt.year >= 2026) )
+    )
+
     is_calculable = (
         (df['VALUE'] == 1)
         & (df['Requisition Type'] != 'Consignment')
-        & (~df['Item Category'].isin(['Jasa Logistik', 'Solar']))
+        & is_valid_category
     )
     
     # Calculate time differences using apply and helper functions (with normalized data)

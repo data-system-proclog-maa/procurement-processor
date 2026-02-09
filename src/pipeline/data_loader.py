@@ -26,6 +26,7 @@ rara_id = '394331579'
 ryi_id = '2095297594'
 way_id = '532810996'
 sln_id = '744466142'
+normalisasi_rfm_solar_id='930974516'
 
 
 normalisasi_rfm_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_rfm_id}'
@@ -43,6 +44,7 @@ rara_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{r
 ryi_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{ryi_id}'
 way_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{way_id}'
 sln_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{sln_id}'
+normalisasi_rfm_solar_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_rfm_solar_id}'
 
 def load_all_data():
     
@@ -65,11 +67,12 @@ def load_all_data():
         data['way_df'] = pd.read_csv(way_path)
         data['sln_df'] = pd.read_csv(sln_path)
     
-        data['picnorm_df'] = pd.read_csv(normalisasi_rfm_path) 
+        data['rfm_normalized_df'] = pd.read_csv(normalisasi_rfm_path) 
         data['ontime_normalized_df'] = pd.read_csv(normalisasi_po_path) 
         data['timedate_normalized_df'] = pd.read_csv(timedate_path)
         data['notcounted_df'] = pd.read_csv(notcounted_po_path)
         data['logistic_normalized_df'] = pd.read_csv(normalisasi_logistic_path)
+        data['normalisasi_rfm_solar_df'] = pd.read_csv(normalisasi_rfm_solar_path)
 
         # Return data
         return data

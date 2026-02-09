@@ -394,7 +394,7 @@ def days_excluding_lebaran(start_date, end_date):
         return non_lebaran_days
 
 #freight type
-def determine_freight(row, freight_mapping, rara_map, ryi_map, way_map):
+def determine_freight(row, freight_mapping, rara_map, ryi_map, way_map, sln_map):
     supplier = row['Supplier']
     po_number = row['PO Number']
 
