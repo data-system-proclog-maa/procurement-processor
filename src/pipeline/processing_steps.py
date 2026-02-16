@@ -201,9 +201,19 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     final_valid_index = start_dates_filtered[final_valid_mask].index
     valid_start_dates = start_dates_filtered[final_valid_mask]
     valid_end_dates = end_dates_filtered[final_valid_mask]
+
+    #Calculate PO SUB - PO APP WD (Work days)
+    df['PO SUB - PO APP WD'] = np.nan
+    is_calculable_wd = is_calculable & df['PO Submit Date'].notna() & df['PO Approval Date'].notna()
+    start_dates_filtered = pd.to_datetime(df.loc[is_calculable_wd, 'PO Submit Date'], errors='coerce')
+    end_dates_filtered = pd.to_datetime(df.loc[is_calculable_wd, 'PO Approval Date'], errors='coerce')
+    final_valid_mask = start_dates_filtered.notna() & end_dates_filtered.notna()
+    final_valid_index = start_dates_filtered[final_valid_mask].index
+    valid_start_dates = start_dates_filtered[final_valid_mask]
+    valid_end_dates = end_dates_filtered[final_valid_mask]
     
     if not final_valid_index.empty:
-        df.loc[final_valid_index, 'PR - PO SUB WD'] = np.busday_count(
+        df.loc[final_valid_index, 'PO SUB - PO APP WD'] = np.busday_count(
             valid_start_dates.values.astype('datetime64[D]'),
             valid_end_dates.values.astype('datetime64[D]'),
             weekmask='1111100',
@@ -438,7 +448,7 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
         'URGENT2', 'URGENT*', 'URGENT_FINALFORLOGBOOK', 'WILAYAH', 'PULAU', 
         'DEPARTMENT_', 'DIVISI', 'SUPPLIER_', 'TOP', 'Updated Requisition Approved Date', 
         'Updated Requisition Required Date', 'Background Update', 'TIME DATE', 'PR - PO', 'PO SUB - PO APP', 
-        'PO - R PO', 'R-R SITE', 'PR - PO SUB WD', 'RPO-TLC', 'TLC-SHIP', 
+        'PO - R PO', 'R-R SITE', 'PR - PO SUB WD', 'PO SUB - PO APP WD', 'RPO-TLC', 'TLC-SHIP', 
         'SHIP-RSITE', 'REQUISITION_TOTAL', 'PO_TOTAL', 'BUDGET', 'BUDGET%', 
         'FARTHEST REQUIRED DATE', 'USED RECEIVE DATE', 'REC', 'STATUS REC', 'ON_TIME', 
         'LATE', 'ON_TIME%', 'LOGISTICAL_PROCESS', 'RECEIVE_INDICATOR_PO', 'RECEIVE_PO_STATUS', 
