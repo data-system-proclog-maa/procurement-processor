@@ -202,6 +202,14 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     valid_start_dates = start_dates_filtered[final_valid_mask]
     valid_end_dates = end_dates_filtered[final_valid_mask]
 
+    if not final_valid_index.empty:
+        df.loc[final_valid_index, 'PR - PO SUB WD'] = np.busday_count(
+            valid_start_dates.values.astype('datetime64[D]'),
+            valid_end_dates.values.astype('datetime64[D]'),
+            weekmask='1111100',
+            holidays=holidays
+        )
+
     #Calculate PO SUB - PO APP WD (Work days)
     df['PO SUB - PO APP WD'] = np.nan
     is_calculable_wd = is_calculable & df['PO Submit Date'].notna() & df['PO Approval Date'].notna()
