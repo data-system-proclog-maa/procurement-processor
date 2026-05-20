@@ -4,10 +4,10 @@ import re
 
 #Lebaran blockout dates
 lebaran_2025 = pd.to_datetime(pd.date_range(start='2025-03-28', end='2025-04-13')).date
-#lebaran_2026 = pd.to_datetime(pd.date_range(start='2026-02-16', end='2026-03-05')).date
+lebaran_2026 = pd.to_datetime(pd.date_range(start='2026-03-18', end='2026-03-31')).date
 
-#combined_dates = list(lebaran_2025) + list(lebaran_2026)
-lebaran_dates = set(lebaran_2025) #change into set(combined_dates) when 2026 is added
+combined_dates = list(lebaran_2025) + list(lebaran_2026)
+lebaran_dates = set(combined_dates) #change into set(combined_dates) when 2026 is added
 
 #extract LOC from Department column
 def LOC_strings(s):
