@@ -72,8 +72,8 @@ def main():
         df = processing_steps.run_all_processing(
             df, 
             picnorm_df, 
-            normalisasi_rfm_solar_df,   # <--- Corrected Position (3rd arg)
-            holidays_df,                # <--- Corrected Position (4th arg)
+            normalisasi_rfm_solar_df,
+            holidays_df,
             wilayah_df, 
             pulau_df, 
             jasa_service_df, 
