@@ -270,6 +270,11 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     )
     
     df['FARTHEST REQUIRED DATE'] = df[['PO Required Date', 'Requisition Required Date', 'TIME DATE']].max(axis=1)
+    # df['USED RECEIVE DATE'] = np.where(
+    #     df['PO Receive Location'] == df['Final Destination Location'],
+    #     df['Receive PO Date'],
+    #     df['Received TL Date']
+    #     )
     df['USED RECEIVE DATE'] = df['Receive PO Date'].fillna(df['Received TL Date'])
     
     df['REC'] = np.where(df['VALUE'] == 1, 
@@ -437,6 +442,42 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
         df['Cost Saving']
     )
 
+    # 22. Calculate physical lead time splits directly from raw dates
+    print("calculating total logistic lead time...")
+    rpo_tlc_phys = (df['Created TL Date'] - df['Receive PO Date']).dt.days
+    tlc_ship_phys = (df['Shipped Date'] - df['Created TL Date']).dt.days
+    ship_rsite_phys = (df['Received TL Date'] - df['Shipped Date']).dt.days
+    df['Total_Logistic_Lead_Time'] = rpo_tlc_phys + tlc_ship_phys + ship_rsite_phys
+
+    # 23. Calculate logistic on time status
+    print("calculating logistic on-time marker...")
+    is_calculable_logistic_ontime = (
+        (df['VALUE'] == 1) &
+        (df['RECEIVED'] == 1) &
+        (df['Received TL Date'].notna()) &
+        (df['Requisition Type'] != "Consignment") &
+        (df['PO Receive Location'] == "Jakarta Warehouse") &
+        (df['LOGISTICAL_PROCESS'] == 1) &
+        (df['Item Category'] != "Jasa Logistik") &
+        (df['Item Category'] != "Jasa/Service")
+    )
+    
+    conds = [
+        df['Final Destination Location'].isin(["Site IMS 52", "Site OPM", "Site KTS"]),
+        df['LOC'].isin({
+            "LC BARU", "LC FLUK", "LC LWI", "LC OBI",
+            "HO BARU", "HO FLUK", "HO LWI", "HO OBI"
+        })
+    ]
+    choices = [34, 24]
+    threshold = np.select(conds, choices, default=17)
+    
+    df['logistic_on_time'] = np.where(
+        is_calculable_logistic_ontime,
+        np.where(df['Total_Logistic_Lead_Time'].isna(), np.nan, np.where(df['Total_Logistic_Lead_Time'] <= threshold, 1, 0)),
+        np.nan
+    )
+
     print("reordering columns and performing final cleanup...")
     # --- Final Column Ordering and Cleanup ---
     final_column_order = [
@@ -463,7 +504,8 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
         'TL_NUMBER_?', 'RECEIVE_INDICATOR_LOGISTIC', 'TL_RECEIVE_INFO', 'FULLY_RECEIVE_INFO', 'TRANSFER_ITEM', 'SHIPPING_TYPE_LAND', 
         'SHIPPING_TYPE_SEA', 'SHIPPING_TYPE_AIR', 'LOGISTIC_FREIGHT', 'RECEIVED', 'NOT_RECEIVED', 
         'PO_RECEIVE', 'JS_SERVICE', 'ON_TIME%_overall_original' ,'ON_TIME%_original_purchasing', 'ON_TIME%_logistic', 'Final_ItemID',
-        'Purchasing_Duration', 'STATUS_Purchasing', 'ON_TIME_Purchasing', 'LATE_Purchasing', 'ON_TIME%_Purchasing','_Routine'
+        'Purchasing_Duration', 'STATUS_Purchasing', 'ON_TIME_Purchasing', 'LATE_Purchasing', 'ON_TIME%_Purchasing','_Routine',
+        'Total_Logistic_Lead_Time', 'logistic_on_time'
     ]
     
     for col in final_column_order:
