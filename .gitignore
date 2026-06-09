@@ -6,6 +6,8 @@ data/processed/output.xlsx
 data/po_entry
 
 export/*.xlsx
+playground.ipynb
+data/reference
 
 pycache/
 *.pyc
