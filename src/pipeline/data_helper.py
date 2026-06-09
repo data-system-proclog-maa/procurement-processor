@@ -2,12 +2,8 @@ import pandas as pd
 import numpy as np
 import re
 
-#Lebaran blockout dates
-lebaran_2025 = pd.to_datetime(pd.date_range(start='2025-03-28', end='2025-04-13')).date
-lebaran_2026 = pd.to_datetime(pd.date_range(start='2026-03-18', end='2026-03-31')).date
-
-combined_dates = list(lebaran_2025) + list(lebaran_2026)
-lebaran_dates = set(combined_dates) #change into set(combined_dates) when 2026 is added
+# Lebaran blockout dates are loaded dynamically from Google Sheets via data_loader.py
+# and passed into days_excluding_lebaran as a parameter.
 
 #extract LOC from Department column
 def LOC_strings(s):
@@ -372,7 +368,7 @@ def determine_time_date_days(loc_series, item_category_series):
     return np.select(conditions, choices, default=0).astype(int)
 
 #def for exclude lebaran
-def days_excluding_lebaran(start_date, end_date):
+def days_excluding_lebaran(start_date, end_date, lebaran_dates=None):
     if pd.isnull(start_date) or pd.isnull(end_date):
         return np.nan
 
@@ -386,7 +382,11 @@ def days_excluding_lebaran(start_date, end_date):
     range_start = min(start_d, end_d)
     range_end = max(start_d, end_d)
     date_range = pd.date_range(start=range_start, end=range_end)[1:] 
-    non_lebaran_days = sum(1 for d in date_range if d.date() not in lebaran_dates)
+    
+    if lebaran_dates is None:
+        non_lebaran_days = len(date_range)
+    else:
+        non_lebaran_days = sum(1 for d in date_range if d.date() not in lebaran_dates)
 
     if is_early:
         return -non_lebaran_days

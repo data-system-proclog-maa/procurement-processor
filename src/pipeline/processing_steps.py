@@ -13,7 +13,8 @@ from data_helper import (
 def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays_df, wilayah_df, pulau_df, jasa_service_df, 
                        freight_df, rara_df, ryi_df, way_df, sln_df,
                        cost_saving_df, timedate_normalized_df, 
-                       ontime_normalized_df, notcounted_df, logistic_normalized_df):
+                       ontime_normalized_df, notcounted_df, logistic_normalized_df,
+                       lebaran_dates_df=None):
     """
     Executes the entire data processing and feature engineering pipeline 
     on the main Procurement DataFrame by applying sequential business logic.
@@ -35,6 +36,21 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     # Extract holiday dates for busday_count (Pythonic variable naming used here)
     holidays = pd.to_datetime(holidays_df['NONWORKDAYS'], format='%d/%m/%Y').dt.date.tolist()
     
+    # Parse lebaran_dates_df to construct the set of exclusion dates
+    lebaran_dates = set()
+    if lebaran_dates_df is not None:
+        for _, row in lebaran_dates_df.iterrows():
+            row_dict = {k.upper(): v for k, v in row.items()}
+            start_val = row_dict.get('START_DATE')
+            end_val = row_dict.get('END_DATE')
+            if pd.notna(start_val) and pd.notna(end_val):
+                try:
+                    start_dt = pd.to_datetime(start_val)
+                    end_dt = pd.to_datetime(end_val)
+                    lebaran_dates.update(pd.date_range(start_dt, end_dt).date)
+                except Exception as e:
+                    print(f"Warning: Failed to parse date range {start_val} - {end_val}: {e}")
+
     # Prepare rfm_normalized_df (Normalization data for Requisition Approved/Required Dates)
     rfm_normalized_indexed = rfm_normalized_df.drop_duplicates(subset='Requisition Number').set_index('Requisition Number')
 
@@ -168,27 +184,27 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     df['PR - PO'] = pd.Series(
         np.where(
             is_calculable, 
-            df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Submit Date']), axis=1), 
+            df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Submit Date'], lebaran_dates), axis=1), 
             np.nan
         )).clip(lower=0)
     
     df['PO SUB - PO APP'] = np.where(
         is_calculable, 
-        df.apply(lambda row: days_excluding_lebaran(row['PO Submit Date'], row['PO Approval Date']), axis=1), 
+        df.apply(lambda row: days_excluding_lebaran(row['PO Submit Date'], row['PO Approval Date'], lebaran_dates), axis=1), 
         np.nan
     )
 
     is_calculable_po_rpo = df['PR - PO'].notna() & df['Receive PO Date'].notna() & (df['Item Category'] != 'Jasa/Service')
     df['PO - R PO'] = np.where(
         is_calculable_po_rpo, 
-        df.apply(lambda row: days_excluding_lebaran(row['PO Approval Date'], row['Receive PO Date']), axis=1), 
+        df.apply(lambda row: days_excluding_lebaran(row['PO Approval Date'], row['Receive PO Date'], lebaran_dates), axis=1), 
         np.nan
     )
 
     is_calculable_r_rsite = df['PR - PO'].notna() & df['Receive PO Date'].notna() & (df['Item Category'] != 'Jasa/Service') & df['Location TL Received'].notna() & (df['LOC'] != 'HO')
     df['R-R SITE'] = np.where(
         is_calculable_r_rsite, 
-        df.apply(lambda row: days_excluding_lebaran(row['Receive PO Date'], row['Received TL Date']), axis=1), 
+        df.apply(lambda row: days_excluding_lebaran(row['Receive PO Date'], row['Received TL Date'], lebaran_dates), axis=1), 
         np.nan
     )
 
@@ -244,7 +260,7 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     
     df['Purchasing_Duration'] = np.where(
         is_calculable, 
-        df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Approval Date']), axis=1),
+        df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Approval Date'], lebaran_dates), axis=1),
         np.nan
     )
 
@@ -278,7 +294,7 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     df['USED RECEIVE DATE'] = df['Receive PO Date'].fillna(df['Received TL Date'])
     
     df['REC'] = np.where(df['VALUE'] == 1, 
-        df.apply(lambda row: days_excluding_lebaran(row['FARTHEST REQUIRED DATE'], row['USED RECEIVE DATE']), axis=1), 
+        df.apply(lambda row: days_excluding_lebaran(row['FARTHEST REQUIRED DATE'], row['USED RECEIVE DATE'], lebaran_dates), axis=1), 
         np.nan)
     
     df['STATUS REC'] = np.where(
@@ -389,8 +405,9 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     # --- Step 6c: Apply Logistic On-Time Normalizations ---
     print("running step 6c: applying logistic on-time normalizations...")
     logistic_normalized_df['PO Number'] = logistic_normalized_df['PO Number'].astype(str).str.strip()
-    logistic_norm_dict = logistic_normalized_df.drop_duplicates(subset='PO Number').set_index('PO Number')['Value']
-    df['ON_TIME%_logistic'] = df['PO Number'].map(logistic_norm_dict)
+    logistic_normalized_po_set = set(logistic_normalized_df['PO Number'].unique())
+    df['ON_TIME%_logistic'] = df['PO Number'].apply(lambda po: 1 if po in logistic_normalized_po_set else np.nan)
+
 
 
     # --- Step 7: Apply Cost Saving Updates ---
