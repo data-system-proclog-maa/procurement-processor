@@ -1,8 +1,8 @@
-
 import pandas as pd
 import numpy as np
 import os
 import sys
+import argparse
 
 # Add pipeline directory to sys.path to ensure imports work
 # Assuming this script is located in src/orchestrator.py
@@ -18,6 +18,14 @@ import data_export
 def main():
     print("Starting Orchestrator...")
     
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description="Procurement Processor Pipeline")
+    parser.add_argument('--refresh', action='store_true', help='Refresh cache from Google Sheets')
+    args, unknown = parser.parse_known_args()
+    
+    if args.refresh:
+        print("Flag --refresh detected. Will refresh references from Google Sheets.")
+
     # ---------------------------------------------------------
     # FIX: Patch data_loader and data_export paths to ensure they work from this script
     # The original modules use relative paths assuming a specific execution context.
@@ -40,7 +48,7 @@ def main():
     # 3. Load Data
     print("Loading data...")
     try:
-        loaded_data = data_loader.load_all_data()
+        loaded_data = data_loader.load_all_data(refresh_cache=args.refresh)
     except Exception as e:
         print(f"Error loading data: {e}")
         return
@@ -63,6 +71,7 @@ def main():
     notcounted_df = loaded_data['notcounted_df']
     logistic_normalized_df = loaded_data['logistic_normalized_df']
     normalisasi_rfm_solar_df = loaded_data['normalisasi_rfm_solar_df']
+    lebaran_dates_df = loaded_data.get('lebaran_dates_df')
 
     # 4. Run Processing
     # IMPORTANT: Passing arguments in the CORRECT order as defined in processing_steps.py
@@ -86,7 +95,8 @@ def main():
             timedate_normalized_df, 
             ontime_normalized_df, 
             notcounted_df, 
-            logistic_normalized_df
+            logistic_normalized_df,
+            lebaran_dates_df=lebaran_dates_df
         )
     except Exception as e:
         print(f"Error during processing: {e}")
@@ -107,3 +117,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
