@@ -5,7 +5,9 @@ data/po_entry/PO Manual PROCESS.xlsx
 data/processed/output.xlsx
 data/po_entry
 
-export/*.xlsx
+*.xlsx
+*.csv
+*.parquet
 playground.ipynb
 data/reference
 
