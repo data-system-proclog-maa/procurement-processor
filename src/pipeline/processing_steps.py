@@ -533,8 +533,233 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     
     df.drop(columns=['Unicode_Key', 'CATEGORYVALUEXCMG', 'CATEGORYVALUE'], inplace=True, errors='ignore')
 
+    # Run post-processing data validation checks
+    validate_processed_data(df)
+
     print("processing complete!")
     return df
+
+def validate_processed_data(df):
+    """
+    Performs post-processing validation checks on the processed DataFrame,
+    prints a consolidated report to the console, and exports the detailed
+    anomalies to a CSV file.
+    """
+    print("\n" + "="*50)
+    print("             DATA VALIDATION REPORT             ")
+    print("="*50)
+    
+    has_issues = False
+    anomalies = []
+    
+    # 1. Empty Item Category
+    empty_cat_mask = df['Item Category'].isna() | (df['Item Category'].astype(str).str.strip() == '') | (df['Item Category'].astype(str).str.strip().str.lower() == 'nan')
+    empty_cat_count = empty_cat_mask.sum()
+    if empty_cat_count > 0:
+        has_issues = True
+        sample_pos = df.loc[empty_cat_mask, 'PO Number'].dropna().unique()[:5]
+        sample_str = ", ".join(map(str, sample_pos))
+        print(f"⚠️  Missing Item Category: Found {empty_cat_count} rows.")
+        if sample_str:
+            print(f"   (Sample POs: {sample_str})")
+            
+        for _, row in df.loc[empty_cat_mask].iterrows():
+            anomalies.append({
+                'PO Number': row.get('PO Number', ''),
+                'Item ID': row.get('Item ID', ''),
+                'Item Name': row.get('Item Name', ''),
+                'Issue Type': 'Missing Item Category',
+                'Details': 'Empty/NaN Item Category'
+            })
+            
+    # 2. Unknown/Incomplete LOC
+    invalid_loc_mask = df['LOC'].isna() | df['LOC'].astype(str).str.strip().isin(['Unknown', 'LC'])
+    unknown_loc_count = invalid_loc_mask.sum()
+    if unknown_loc_count > 0:
+        has_issues = True
+        sample_pos = df.loc[invalid_loc_mask, 'PO Number'].dropna().unique()[:5]
+        sample_str = ", ".join(map(str, sample_pos))
+        print(f"⚠️  Unknown/Incomplete LOC: Found {unknown_loc_count} rows.")
+        if sample_str:
+            print(f"   (Sample POs: {sample_str})")
+            
+        for _, row in df.loc[invalid_loc_mask].iterrows():
+            anomalies.append({
+                'PO Number': row.get('PO Number', ''),
+                'Item ID': row.get('Item ID', ''),
+                'Item Name': row.get('Item Name', ''),
+                'Issue Type': 'Unknown/Incomplete LOC',
+                'Details': f"LOC is {row.get('LOC', '')}"
+            })
+            
+    # 3. Unresolved Logistic Freight
+    jasa_logistik_mask = df['Item Category'] == 'Jasa Logistik'
+    unresolved_freight_mask = jasa_logistik_mask & (
+        df['LOGISTIC_FREIGHT'].isna() | 
+        (df['LOGISTIC_FREIGHT'].astype(str).str.strip() == '') | 
+        df['LOGISTIC_FREIGHT'].astype(str).str.lower().str.contains('unknown')
+    )
+    unresolved_freight_count = unresolved_freight_mask.sum()
+    if unresolved_freight_count > 0:
+        has_issues = True
+        freight_vals = df.loc[unresolved_freight_mask, 'LOGISTIC_FREIGHT'].astype(str)
+        
+        rara_count = freight_vals.str.contains('RARA', case=False, na=False).sum()
+        ryi_count = (freight_vals.str.contains('RYI', case=False, na=False) | freight_vals.str.contains('FYI', case=False, na=False)).sum()
+        way_count = freight_vals.str.contains('WAY', case=False, na=False).sum()
+        sln_count = freight_vals.str.contains('SLN', case=False, na=False).sum()
+        other_count = unresolved_freight_count - (rara_count + ryi_count + way_count + sln_count)
+        
+        detail_parts = []
+        if rara_count > 0: detail_parts.append(f"RARA ({rara_count})")
+        if ryi_count > 0: detail_parts.append(f"RYI ({ryi_count})")
+        if way_count > 0: detail_parts.append(f"WAY ({way_count})")
+        if sln_count > 0: detail_parts.append(f"SLN ({sln_count})")
+        if other_count > 0: detail_parts.append(f"Other ({other_count})")
+        
+        detail_str = ", ".join(detail_parts)
+        print(f"⚠️  Unresolved Logistic Freight: Found {unresolved_freight_count} rows of 'Jasa Logistik'.")
+        if detail_str:
+            print(f"   (Unresolved details: {detail_str})")
+        sample_pos = df.loc[unresolved_freight_mask, 'PO Number'].dropna().unique()[:5]
+        sample_str = ", ".join(map(str, sample_pos))
+        if sample_str:
+            print(f"   (Sample POs: {sample_str})")
+            
+        for _, row in df.loc[unresolved_freight_mask].iterrows():
+            anomalies.append({
+                'PO Number': row.get('PO Number', ''),
+                'Item ID': row.get('Item ID', ''),
+                'Item Name': row.get('Item Name', ''),
+                'Issue Type': 'Unresolved Logistic Freight',
+                'Details': f"LOGISTIC_FREIGHT is {row.get('LOGISTIC_FREIGHT', '')}"
+            })
+            
+    # 4. Outlier Lead Times
+    pr_po_col = 'PR - PO'
+    if pr_po_col in df.columns:
+        pr_po_outlier_mask = df[pr_po_col].notna() & ((df[pr_po_col] < 0) | (df[pr_po_col] > 180))
+        pr_po_outlier_count = pr_po_outlier_mask.sum()
+        if pr_po_outlier_count > 0:
+            has_issues = True
+            sample_data = df.loc[pr_po_outlier_mask, ['PO Number', pr_po_col]].drop_duplicates(subset=['PO Number'])[:5]
+            sample_str = ", ".join([f"{row['PO Number']} ({int(row[pr_po_col])} days)" for _, row in sample_data.iterrows()])
+            print(f"⚠️  Lead Time Outliers (PR - PO): Found {pr_po_outlier_count} rows (< 0 or > 180 days).")
+            if sample_str:
+                print(f"   (Sample POs: {sample_str})")
+                
+            for _, row in df.loc[pr_po_outlier_mask].iterrows():
+                anomalies.append({
+                    'PO Number': row.get('PO Number', ''),
+                    'Item ID': row.get('Item ID', ''),
+                    'Item Name': row.get('Item Name', ''),
+                    'Issue Type': 'Lead Time Outlier (PR - PO)',
+                    'Details': f"PR - PO is {int(row[pr_po_col])} days"
+                })
+                
+    po_rpo_col = 'PO - R PO'
+    if po_rpo_col in df.columns:
+        po_rpo_outlier_mask = df[po_rpo_col].notna() & ((df[po_rpo_col] < 0) | (df[po_rpo_col] > 180))
+        po_rpo_outlier_count = po_rpo_outlier_mask.sum()
+        if po_rpo_outlier_count > 0:
+            has_issues = True
+            sample_data = df.loc[po_rpo_outlier_mask, ['PO Number', po_rpo_col]].drop_duplicates(subset=['PO Number'])[:5]
+            sample_str = ", ".join([f"{row['PO Number']} ({int(row[po_rpo_col])} days)" for _, row in sample_data.iterrows()])
+            print(f"⚠️  Lead Time Outliers (PO - R PO): Found {po_rpo_outlier_count} rows (< 0 or > 180 days).")
+            if sample_str:
+                print(f"   (Sample POs: {sample_str})")
+                
+            for _, row in df.loc[po_rpo_outlier_mask].iterrows():
+                anomalies.append({
+                    'PO Number': row.get('PO Number', ''),
+                    'Item ID': row.get('Item ID', ''),
+                    'Item Name': row.get('Item Name', ''),
+                    'Issue Type': 'Lead Time Outlier (PO - R PO)',
+                    'Details': f"PO - R PO is {int(row[po_rpo_col])} days"
+                })
+
+    # 5. Future Dates
+    future_limit = pd.Timestamp.now() + pd.Timedelta(days=1)
+    date_cols_to_check = ['PO Approval Date', 'Receive PO Date', 'Requisition Date', 'Received TL Date', 'Shipped Date']
+    future_date_issues = []
+    
+    for col in date_cols_to_check:
+        if col in df.columns:
+            dt_series = pd.to_datetime(df[col], errors='coerce')
+            future_mask = dt_series.notna() & (dt_series > future_limit)
+            future_count = future_mask.sum()
+            if future_count > 0:
+                future_date_issues.append((col, future_count, future_mask))
+                
+    if future_date_issues:
+        has_issues = True
+        total_future_rows = sum([count for _, count, _ in future_date_issues])
+        print(f"⚠️  Future Dates: Found {total_future_rows} occurrences across date columns.")
+        for col, count, mask in future_date_issues:
+            sample_pos = df.loc[mask, 'PO Number'].dropna().unique()[:3]
+            sample_str = ", ".join(map(str, sample_pos))
+            sample_val = df.loc[mask, col].dropna().iloc[0]
+            if isinstance(sample_val, pd.Timestamp):
+                sample_val_str = sample_val.strftime('%Y-%m-%d')
+            else:
+                sample_val_str = str(sample_val)
+            print(f"   - '{col}': {count} rows. (Sample POs: {sample_str} [e.g. {sample_val_str}])")
+            
+            for _, row in df.loc[mask].iterrows():
+                anomalies.append({
+                    'PO Number': row.get('PO Number', ''),
+                    'Item ID': row.get('Item ID', ''),
+                    'Item Name': row.get('Item Name', ''),
+                    'Issue Type': 'Future Date',
+                    'Details': f"{col} is {row.get(col, '')}"
+                })
+            
+    # 6. Over-Received Quantities
+    if 'Qty Received' in df.columns and 'Qty Order' in df.columns:
+        over_rec_mask = (df['Qty Received'].notna()) & (df['Qty Order'].notna()) & (df['Qty Received'] > df['Qty Order'])
+        over_rec_count = over_rec_mask.sum()
+        if over_rec_count > 0:
+            has_issues = True
+            sample_data = df.loc[over_rec_mask, ['PO Number', 'Qty Order', 'Qty Received']].drop_duplicates(subset=['PO Number'])[:5]
+            sample_str = ", ".join([f"{row['PO Number']} (Ordered: {row['Qty Order']}, Received: {row['Qty Received']})" for _, row in sample_data.iterrows()])
+            print(f"⚠️  Over-Received Quantities: Found {over_rec_count} rows.")
+            if sample_str:
+                print(f"   (Sample POs: {sample_str})")
+                
+            for _, row in df.loc[over_rec_mask].iterrows():
+                anomalies.append({
+                    'PO Number': row.get('PO Number', ''),
+                    'Item ID': row.get('Item ID', ''),
+                    'Item Name': row.get('Item Name', ''),
+                    'Issue Type': 'Over-Received Quantity',
+                    'Details': f"Ordered: {row.get('Qty Order', '')}, Received: {row.get('Qty Received', '')}"
+                })
+
+    if not has_issues:
+        print("✅ All check items passed! No data quality issues found.")
+    else:
+        # Export anomalies to CSV
+        try:
+            import os
+            import datetime
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(os.path.dirname(current_dir))
+            export_dir = os.path.join(project_root, 'export')
+            os.makedirs(export_dir, exist_ok=True)
+            
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            anomalies_filename = f"validation_anomalies_{timestamp}.csv"
+            anomalies_filepath = os.path.join(export_dir, anomalies_filename)
+            
+            anomalies_df = pd.DataFrame(anomalies)
+            anomalies_df.to_csv(anomalies_filepath, index=False)
+            print(f"ℹ️  Full anomalies report saved to: {os.path.abspath(anomalies_filepath)}")
+        except Exception as e:
+            print(f"❌ Failed to export validation anomalies to CSV: {e}")
+        
+    print("="*50)
+    print("Reminder: Don't forget to pull the Approved PO from 01/01/2025 onwards, not the whole data.")
+    print("="*50 + "\n")
 
 if __name__ == '__main__':
     print("processing_steps.py is the core logic module. Run from the notebook.")
