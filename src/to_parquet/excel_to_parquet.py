@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from python_calamine import CalamineWorkbook
 
-def convert_excel_to_parquet(input_file="data.xlsx", output_file="data_1.parquet",min_rows=0,  max_rows=71763):
+def convert_excel_to_parquet(input_file="data.xlsx", output_file="data_cold.parquet",min_rows=0,  max_rows=71793):
     """
     Reads data.xlsx up to max_rows (including header) using python-calamine,
     applies strict data typing to each column, and saves to a Parquet file.
@@ -15,10 +15,12 @@ def convert_excel_to_parquet(input_file="data.xlsx", output_file="data_1.parquet
     # Calamine to_python returns all rows
     # We slice up to max_rows (which is 1 header + (max_rows - 1) data rows)
     all_rows = sheet.to_python()
-    slice_rows = all_rows[min_rows-1:max_rows]
     
     header = all_rows[0]
-    data = all_rows[min_rows-1:max_rows]
+    
+    # Ensure start index is at least 1 (to skip header) and avoid negative indices
+    start_idx = max(1, min_rows)
+    data = all_rows[start_idx:max_rows]
     
     print(f"Loaded {len(data)} data records. Creating DataFrame...")
     df = pd.DataFrame(data, columns=header)

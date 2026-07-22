@@ -188,25 +188,28 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
             np.nan
         )).clip(lower=0)
     
-    df['PO SUB - PO APP'] = np.where(
-        is_calculable, 
-        df.apply(lambda row: days_excluding_lebaran(row['PO Submit Date'], row['PO Approval Date'], lebaran_dates), axis=1), 
-        np.nan
-    )
+    df['PO SUB - PO APP'] = pd.Series(
+        np.where(
+            is_calculable, 
+            df.apply(lambda row: days_excluding_lebaran(row['PO Submit Date'], row['PO Approval Date'], lebaran_dates), axis=1), 
+            np.nan
+        )).clip(lower=0)
 
     is_calculable_po_rpo = df['PR - PO'].notna() & df['Receive PO Date'].notna() & (df['Item Category'] != 'Jasa/Service')
-    df['PO - R PO'] = np.where(
-        is_calculable_po_rpo, 
-        df.apply(lambda row: days_excluding_lebaran(row['PO Approval Date'], row['Receive PO Date'], lebaran_dates), axis=1), 
-        np.nan
-    )
+    df['PO - R PO'] = pd.Series(
+        np.where(
+            is_calculable_po_rpo, 
+            df.apply(lambda row: days_excluding_lebaran(row['PO Approval Date'], row['Receive PO Date'], lebaran_dates), axis=1), 
+            np.nan
+        )).clip(lower=0)
 
     is_calculable_r_rsite = df['PR - PO'].notna() & df['Receive PO Date'].notna() & (df['Item Category'] != 'Jasa/Service') & df['Location TL Received'].notna() & (df['LOC'] != 'HO')
-    df['R-R SITE'] = np.where(
-        is_calculable_r_rsite, 
-        df.apply(lambda row: days_excluding_lebaran(row['Receive PO Date'], row['Received TL Date'], lebaran_dates), axis=1), 
-        np.nan
-    )
+    df['R-R SITE'] = pd.Series(
+        np.where(
+            is_calculable_r_rsite, 
+            df.apply(lambda row: days_excluding_lebaran(row['Receive PO Date'], row['Received TL Date'], lebaran_dates), axis=1), 
+            np.nan
+        )).clip(lower=0)
 
     #Calculate PR - PO SUB WD (Work days)
     df['PR - PO SUB WD'] = np.nan
@@ -219,11 +222,14 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     valid_end_dates = end_dates_filtered[final_valid_mask]
 
     if not final_valid_index.empty:
-        df.loc[final_valid_index, 'PR - PO SUB WD'] = np.busday_count(
-            valid_start_dates.values.astype('datetime64[D]'),
-            valid_end_dates.values.astype('datetime64[D]'),
-            weekmask='1111100',
-            holidays=holidays
+        df.loc[final_valid_index, 'PR - PO SUB WD'] = np.maximum(
+            0,
+            np.busday_count(
+                valid_start_dates.values.astype('datetime64[D]'),
+                valid_end_dates.values.astype('datetime64[D]'),
+                weekmask='1111100',
+                holidays=holidays
+            )
         )
 
     #Calculate PO SUB - PO APP WD (Work days)
@@ -237,11 +243,14 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     valid_end_dates = end_dates_filtered[final_valid_mask]
     
     if not final_valid_index.empty:
-        df.loc[final_valid_index, 'PO SUB - PO APP WD'] = np.busday_count(
-            valid_start_dates.values.astype('datetime64[D]'),
-            valid_end_dates.values.astype('datetime64[D]'),
-            weekmask='1111100',
-            holidays=holidays
+        df.loc[final_valid_index, 'PO SUB - PO APP WD'] = np.maximum(
+            0,
+            np.busday_count(
+                valid_start_dates.values.astype('datetime64[D]'),
+                valid_end_dates.values.astype('datetime64[D]'),
+                weekmask='1111100',
+                holidays=holidays
+            )
         )
     
     # Calculate Financials
@@ -251,18 +260,19 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     df['BUDGET%'] = (df['PO_TOTAL'] / df['REQUISITION_TOTAL']).clip(upper=1)
     
     # Calculate Logistics Time Splits
-    df['RPO-TLC'] = np.where(df['R-R SITE'].notna(), (df['Created TL Date'] - df['Receive PO Date']).dt.days, np.nan)
-    df['TLC-SHIP'] = np.where(df['R-R SITE'].notna(), (df['Shipped Date'] - df['Created TL Date']).dt.days, np.nan)
-    df['SHIP-RSITE'] = np.where(df['R-R SITE'].notna(), (df['Received TL Date'] - df['Shipped Date']).dt.days, np.nan)
+    df['RPO-TLC'] = pd.Series(np.where(df['R-R SITE'].notna(), (df['Created TL Date'] - df['Receive PO Date']).dt.days, np.nan)).clip(lower=0)
+    df['TLC-SHIP'] = pd.Series(np.where(df['R-R SITE'].notna(), (df['Shipped Date'] - df['Created TL Date']).dt.days, np.nan)).clip(lower=0)
+    df['SHIP-RSITE'] = pd.Series(np.where(df['R-R SITE'].notna(), (df['Received TL Date'] - df['Shipped Date']).dt.days, np.nan)).clip(lower=0)
 
     # --- Purchasing On-Time Calculation ---
     print("calculating purchasing on-time metric...")
     
-    df['Purchasing_Duration'] = np.where(
-        is_calculable, 
-        df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Approval Date'], lebaran_dates), axis=1),
-        np.nan
-    )
+    df['Purchasing_Duration'] = pd.Series(
+        np.where(
+            is_calculable, 
+            df.apply(lambda row: days_excluding_lebaran(used_approved_date[row.name], row['PO Approval Date'], lebaran_dates), axis=1),
+            np.nan
+        )).clip(lower=0)
 
     # Use helper function to calculate all status flags at once
     df['STATUS_Purchasing'], df['ON_TIME_Purchasing'], df['LATE_Purchasing'], df['ON_TIME%_Purchasing'] = \
