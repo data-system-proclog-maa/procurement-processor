@@ -113,7 +113,7 @@ def main():
         return
         
     print("Pipeline execution completed successfully.")
-    print("dont forget to pull the Approved PO from 01/01/2025 onwards, not the whole data")
+    print("dont forget to pull the Approved PO from 01/07/2025 onwards, not the whole data")
 
 if __name__ == '__main__':
     main()

@@ -48,6 +48,33 @@ sln_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{sl
 normalisasi_rfm_solar_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{normalisasi_rfm_solar_id}'
 lebaran_dates_path = f'https://docs.google.com/spreadsheets/d/{sheet_id}/{exportformat}{lebaran_dates_id}'
 
+def sanitize_dataframe_for_parquet(df):
+    """Sanitize object columns with mixed types (e.g. int and str) so PyArrow can write Parquet cleanly."""
+    df = df.copy()
+    # Explicitly convert Requisition Number to string if present
+    if 'Requisition Number' in df.columns:
+        df['Requisition Number'] = df['Requisition Number'].apply(
+            lambda x: str(int(x)) if isinstance(x, (int, float)) and pd.notna(x) and (isinstance(x, int) or x.is_integer())
+            else str(x) if pd.notna(x)
+            else x
+        )
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            non_nulls = df[col].dropna()
+            if not non_nulls.empty:
+                types = set(non_nulls.map(type))
+                if len(types) > 1 or (types and str not in types):
+                    def convert_val(x):
+                        if pd.isna(x):
+                            return np.nan
+                        if isinstance(x, (int, float)):
+                            if isinstance(x, int) or (isinstance(x, float) and x.is_integer()):
+                                return str(int(x))
+                            return str(x)
+                        return str(x)
+                    df[col] = df[col].apply(convert_val)
+    return df
+
 def load_all_data(refresh_cache=False):
     data = {}
     
@@ -65,6 +92,7 @@ def load_all_data(refresh_cache=False):
             else:
                 print("Excel file changed or cache missing. Loading PO Entry List.xlsx (takes ~45s)...")
                 data['df'] = pd.read_excel(xlsx_path)
+                data['df'] = sanitize_dataframe_for_parquet(data['df'])
                 data['df'].to_parquet(parquet_path, index=False, engine='pyarrow')
                 print("Saved PO Entry List to Parquet cache.")
         else:
@@ -121,6 +149,7 @@ def load_all_data(refresh_cache=False):
             print(f"Downloading {key} from Google Sheets...")
             try:
                 data[key] = pd.read_csv(url_path)
+                data[key] = sanitize_dataframe_for_parquet(data[key])
                 # Save to cache
                 data[key].to_parquet(pq_path, index=False, engine='pyarrow')
             except Exception as e:

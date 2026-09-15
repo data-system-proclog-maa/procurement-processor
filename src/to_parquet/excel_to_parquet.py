@@ -3,26 +3,27 @@ import pandas as pd
 import numpy as np
 from python_calamine import CalamineWorkbook
 
-def convert_excel_to_parquet(input_file="data.xlsx", output_file="data_cold.parquet",min_rows=0,  max_rows=71793):
+def convert_excel_to_parquet(input_file="data.xlsx", output_file="data.parquet", min_rows=0, max_rows=None):
     """
-    Reads data.xlsx up to max_rows (including header) using python-calamine,
+    Reads data.xlsx (entire file by default) using python-calamine,
     applies strict data typing to each column, and saves to a Parquet file.
     """
-    print(f"Reading {min_rows} to {max_rows} rows from {input_file} using Calamine...")
+    print(f"Reading from {input_file} using Calamine...")
     wb = CalamineWorkbook.from_path(input_file)
     sheet = wb.get_sheet_by_name(wb.sheet_names[0])
     
     # Calamine to_python returns all rows
-    # We slice up to max_rows (which is 1 header + (max_rows - 1) data rows)
     all_rows = sheet.to_python()
-    
     header = all_rows[0]
     
-    # Ensure start index is at least 1 (to skip header) and avoid negative indices
+    # Ensure start index is at least 1 (to skip header)
     start_idx = max(1, min_rows)
-    data = all_rows[start_idx:max_rows]
+    if max_rows is not None:
+        data = all_rows[start_idx:max_rows]
+    else:
+        data = all_rows[start_idx:]
     
-    print(f"Loaded {len(data)} data records. Creating DataFrame...")
+    print(f"Loaded all {len(data):,} data records. Creating DataFrame...")
     df = pd.DataFrame(data, columns=header)
     
     # Define Column Type Mappings
