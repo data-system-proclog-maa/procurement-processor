@@ -150,6 +150,19 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     df.loc[first_occurrence_mask & (df.groupby('PO Number')['VALUE'].transform('sum') == 0), 'VALUE'] = 1
     
     df['UNIQUE COUNT PO'] = np.where(~df['PO Number'].duplicated(), 1, 0)
+    
+    # Explicit override for Petty Cash: set both VALUE and UNIQUE COUNT PO to 0, and LOC to PETTY CASH
+    is_petty_cash = df['Item Category'].astype(str).str.strip().str.lower() == 'petty cash'
+    df.loc[is_petty_cash, 'VALUE'] = 0
+    df.loc[is_petty_cash, 'UNIQUE COUNT PO'] = 0
+    df.loc[is_petty_cash, 'LOC'] = 'PETTY CASH'
+
+    # Explicit override for TEST department and TEST item category: set VALUE and UNIQUE COUNT PO to 0
+    is_test = df['Department'].astype(str).str.upper().str.contains('TEST', na=False) | (df['Item Category'].astype(str).str.strip().str.lower() == 'test')
+    df.loc[is_test, 'VALUE'] = 0
+    df.loc[is_test, 'UNIQUE COUNT PO'] = 0
+    df.loc[is_test, 'LOC'] = 'TEST'
+    
     df['Final_ItemID'] = df['Item ID']
 
 
@@ -382,7 +395,8 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     df['uid'] = df_itemID_clean + df_poNum_clean
     jasa_service_df['uid'] = js_itemID_clean + js_poNum_clean
     
-    df = df.merge(jasa_service_df[['uid', 'JS_SERVICE']], on='uid', how='left')
+    js_service_unique = jasa_service_df.drop_duplicates(subset=['uid'])[['uid', 'JS_SERVICE']]
+    df = df.merge(js_service_unique, on='uid', how='left')
     df.drop(columns=['uid'], inplace=True)
 
 
@@ -768,7 +782,7 @@ def validate_processed_data(df):
             print(f"❌ Failed to export validation anomalies to CSV: {e}")
         
     print("="*50)
-    print("Reminder: Don't forget to pull the Approved PO from 01/01/2025 onwards, not the whole data.")
+    print("Reminder: Don't forget to pull the Approved PO from 01/07/2025 onwards, not the whole data.")
     print("="*50 + "\n")
 
 if __name__ == '__main__':

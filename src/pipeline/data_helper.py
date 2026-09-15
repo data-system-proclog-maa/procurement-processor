@@ -10,9 +10,15 @@ def LOC_strings(s):
     if pd.isna(s):
         return 'Unknown'
    
-   #remove X and whitespace if exist in the beginning     
+    #remove X and whitespace if exist in the beginning     
     s = s[1:].strip().upper() if str(s).upper().startswith('X') else s.strip().upper()
     
+    if 'PETTY' in s:
+        return 'PETTY CASH'
+
+    if 'TEST' in s:
+        return 'TEST'
+
     #loc mapping for HO endings
     if s.endswith('-HO'):
         return "HO"
@@ -21,7 +27,8 @@ def LOC_strings(s):
     LOCATION_MAP = {
         'PALU': 'PALU', 'FLUK': 'FLUK', 'LAR': 'LAR', 'LWK': 'LWK', 
         'OBI': 'OBI', 'KDI': 'KDI', 'BARU': 'BARU', 'MUNA': 'MUNA', 
-        'LWI': 'LWI', 'POM': 'POM', 'KNW': 'KNW', 'WATU': 'WATU', 'LAEYA': 'LAEYA'
+        'LWI': 'LWI', 'POM': 'POM', 'KNW': 'KNW', 'WATU': 'WATU', 'LAEYA': 'LAEYA',
+        'LBH' : 'LBH', 'TTE' : 'TTE'
     }
     
     loc_type = 'HO' if '__' in s else 'LC'
@@ -67,7 +74,8 @@ def project_string(s):
         suffix_map = {
             'SC': 'SC', 'HO': 'HO', 'LAR': 'LAR', 'WATU': 'WATU', 
             'OBI': 'OBI', 'POM': 'POM', 'LAEYA': 'LAEYA', 'KDI': 'LAR',
-            'BARU': 'BARU', 'LWI': 'LWI', 'SOL': 'SOL' 
+            'BARU': 'BARU', 'LWI': 'LWI', 'SOL': 'SOL', 'LBH': 'LBH',
+            'TTE' : 'TTE'
         }
         
         # Check if the string ends with any key in the map
@@ -137,12 +145,20 @@ def item_category_merged(item_category, unit=None):
 #Value marker, for more info check documentation
 def category_value_marker(row):
     """Marks categories that should not be counted for performance."""
-    specific_categories = ["Kontrak", "Seragam", "Jasa Logistik", "Jasa/Service", "ATK", "Cetak", "Makanan dan Minuman", "Seragam Security", "x Kebutuhan Kantin", "x Kebutuhan Mess", "x Medical dan Obat"]
-    item_category = str(row['Item Category']).strip()   
+    specific_categories = [
+        "kontrak", "seragam", "jasa logistik", "jasa/service", "atk", "cetak", 
+        "makanan dan minuman", "seragam security", "x kebutuhan kantin", 
+        "x kebutuhan mess", "x medical dan obat", "petty cash", "test"
+    ]
+    item_category = str(row['Item Category']).strip().lower()   
     requisition_type = str(row['Requisition Type']).strip()
     item_name = str(row['Item Name']).strip().lower()
+    department = str(row['Department']).strip().lower() if 'Department' in row and pd.notna(row['Department']) else ''
     
-    if item_category in specific_categories or requisition_type == "Consignment" or (item_category == "APD" and "sepatu" in item_name):
+    if (item_category in specific_categories or 
+        "test" in department or 
+        requisition_type == "Consignment" or 
+        (item_category == "apd" and "sepatu" in item_name)):
         return 1
     return 0
 
@@ -180,10 +196,24 @@ def apply_routine_logic(df_series_routine : pd.Series, category_series : pd.Seri
     #define rules as a list of (condition_mask, value)
     rules = [
         # ---------------------------------------------------------
-        # fix price contract 
+        # fix price contract & consignment
         # ---------------------------------------------------------
         (
             (requisition_type_series == 'contract (fix price)'),
+            'Routine'
+        ),
+        (
+            (requisition_type_series == 'consignment'),
+            'Routine'
+        ),
+        (
+            (category_series.str.contains('solar', na=False)) |
+            (item_name_series.str.contains('solar', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series.isin(['refill/gas', 'refill', 'gas'])) |
+            (item_name_series.str.contains('refill tabung|refill oxygen|refill gas|gas lpg|elpiji|bright gas', na=False)),
             'Routine'
         ),
 
@@ -295,7 +325,8 @@ def apply_routine_logic(df_series_routine : pd.Series, category_series : pd.Seri
 
         (category_series == 'telepon', 'Non-Routine'),
         (category_series == 'tire dt', 'Routine'),
-        (category_series == 'perangkat it', 'Non-Routine'),
+        (category_series.isin(['perangkat it', 'kebutuhan it']), 'Non-Routine'),
+        (category_series.isin(['furniture dan elektronik', 'furniture', 'elektronik']), 'Non-Routine'),
         (category_series == 'jasa/service', 'Non-Routine'),
         (category_series == 'mesin bor dan part', 'Non-Routine'),
         (category_series == 'alat teknik', 'Non-Routine'),
@@ -318,6 +349,35 @@ def apply_routine_logic(df_series_routine : pd.Series, category_series : pd.Seri
         (category_series == 'tire vb', 'Routine'),
         (category_series == 'radio ht, rig', 'Non-Routine'),
         (category_series == 'packaging', 'Routine'),
+        (category_series == 'kendaraan', 'Non-Routine'),
+
+        # ---------------------------------------------------------
+        # spare part: filter -> Routine (priority), assy/assembly -> Non-Routine
+        # ---------------------------------------------------------
+        (
+            (category_series.str.startswith('spare part', na=False)) &
+            (item_name_series.str.contains('filter', na=False)),
+            'Routine'
+        ),
+        (
+            (category_series.str.startswith('spare part', na=False)) &
+            (~item_name_series.str.contains('filter', na=False)) &
+            (item_name_series.str.contains('assy|assembly', na=False)),
+            'Non-Routine'
+        ),
+
+        # ---------------------------------------------------------
+        # consumables, general supplies, and exploration
+        # ---------------------------------------------------------
+        (category_series.str.startswith('consumable', na=False), 'Routine'),
+        (category_series == 'atk', 'Routine'),
+        (category_series == 'makanan dan minuman', 'Routine'),
+        (category_series.isin(['bolt dan nut', 'bolt & nut']), 'Routine'),
+        (category_series == 'perabotan', 'Routine'),
+        (category_series.isin(['obat-obatan', 'medical dan obat', 'alat medic']), 'Routine'),
+        (category_series.isin(['hose dan crimping', 'hose & crimping']), 'Routine'),
+        (category_series.isin(['peralatan eksplor', 'kebutuhan eksplor', 'peralatan geo/eksplor']), 'Non-Routine'),
+        (category_series.isin(['alat dan bahan bangunan', 'bangunan', 'bahan bangunan']), 'Non-Routine'),
     ]
     
     #apply all rules sequentially 
