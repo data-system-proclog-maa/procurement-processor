@@ -115,19 +115,23 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     df['URGENT_FINALFORLOGBOOK'] = df['URGENT*'].combine_first(df['URGENT_NORMAL'])
 
     # Wilayah and Pulau (Mapping Logic)
-    temp_df = df[['Supplier Location']].copy()
-    temp_df['Supplier Location'] = temp_df['Supplier Location'].str.strip().str.lower()
-    
-    wilayah_df['Supplier Location'] = wilayah_df['Supplier Location'].str.strip().str.lower()
-    pulau_df['Wilayah'] = pulau_df['Wilayah'].str.strip().str.lower()
-    
-    wilayah_process = pd.merge(temp_df, wilayah_df, on='Supplier Location', how='left')
-    wilayah_process['To'] = wilayah_process['To'].str.lower()
-    
-    supplier_process = pd.merge(wilayah_process, pulau_df, left_on='To', right_on='Wilayah', how='left')
-    
-    df['WILAYAH'] = supplier_process['To']
-    df['PULAU'] = supplier_process['Pulau']
+    wilayah_clean = wilayah_df.dropna(subset=['Supplier Location']).copy()
+    wilayah_clean['Supplier Location'] = wilayah_clean['Supplier Location'].astype(str).str.strip().str.lower()
+    wilayah_clean['To'] = wilayah_clean['To'].astype(str).str.strip().str.lower()
+    wilayah_clean = wilayah_clean.drop_duplicates(subset=['Supplier Location'])
+
+    pulau_clean = pulau_df.dropna(subset=['Wilayah']).copy()
+    pulau_clean['Wilayah'] = pulau_clean['Wilayah'].astype(str).str.strip().str.lower()
+    pulau_clean['Pulau'] = pulau_clean['Pulau'].astype(str).str.strip()
+    pulau_clean = pulau_clean.drop_duplicates(subset=['Wilayah'])
+
+    wilayah_to_pulau = pd.merge(wilayah_clean, pulau_clean, left_on='To', right_on='Wilayah', how='left')
+    wilayah_map = dict(zip(wilayah_clean['Supplier Location'], wilayah_clean['To']))
+    pulau_map = dict(zip(wilayah_to_pulau['Supplier Location'], wilayah_to_pulau['Pulau']))
+
+    clean_loc = df['Supplier Location'].str.strip().str.lower()
+    df['WILAYAH'] = clean_loc.map(wilayah_map)
+    df['PULAU'] = clean_loc.map(pulau_map)
 
     # Apply other string helpers
     df['DEPARTMENT_'] = df['Department'].apply(project_string)
@@ -387,6 +391,9 @@ def run_all_processing(df, rfm_normalized_df, normalisasi_rfm_solar_df, holidays
     # --- Step 5: Jasa Service Merge ---
     print("running step 5: jasa service merge...")
     
+    if 'JS_SERVICE' in df.columns:
+        df.drop(columns=['JS_SERVICE'], inplace=True)
+
     df_itemID_clean = df['Item ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
     df_poNum_clean = df['PO Number'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
     js_itemID_clean = jasa_service_df['Item ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
