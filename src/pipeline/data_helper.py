@@ -113,13 +113,15 @@ def TOP_strings(s):
     if pd.isna(s): return np.nan
     s = str(s).lower().strip()
     
-    progressive_keywords = ['dp', 'downpayment', 'down payment', 'pembayaran 1 ', '50% sebelum', 'kredit', 'tahap', 'leasing', 'installment']
+    progressive_keywords = ['dp', 'downpayment', 'down payment', 'pembayaran 1 ', '50% sebelum', 'kredit', 'tahap', 'leasing', 'installment', 'progressive', 'top progressive']
     tbd_keywords = ['pembayaran sebelum', 'before delivery', 'sebelum pengiriman', 'cash', 'uang muka', '100% sebelum', 'tunai', 'seelum', 'sebeulm', 'transfer', 'pengiriman setelah pembayaran', 'setelah pembayaran','100% di muka']
     tempo_keywords = ['hari setelah', 'hari dari', 'tempo', 'invoice diterima', 'penagihan dilakukan', 'setelah pengiriman', 'pembayaran setelah', 'kontrak', 'after delivery', 'hari kerja', 'telah diterima', 'pembayaran per bulan', 'ari', '0', 'pekerjaan pengujian dilakukan setelah pembayaran dilakukan']
+    jasa_keywords = ['jasa']
     
     if any(keyword in s for keyword in progressive_keywords): return 'Progressive'
     if any(keyword in s for keyword in tbd_keywords): return 'TBD'
     if any(keyword in s for keyword in tempo_keywords): return 'Tempo'
+    if any(keyword in s for keyword in jasa_keywords): return 'Jasa/Servis'
     return 'Not Applicable'
 
 #categorization within Item Category for CATEGORYMERGED 
@@ -378,6 +380,7 @@ def apply_routine_logic(df_series_routine : pd.Series, category_series : pd.Seri
         (category_series.isin(['hose dan crimping', 'hose & crimping']), 'Routine'),
         (category_series.isin(['peralatan eksplor', 'kebutuhan eksplor', 'peralatan geo/eksplor']), 'Non-Routine'),
         (category_series.isin(['alat dan bahan bangunan', 'bangunan', 'bahan bangunan']), 'Non-Routine'),
+        (category_series == 'besi dan plat', 'Non-Routine'),
     ]
     
     #apply all rules sequentially 
