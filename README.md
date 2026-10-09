@@ -59,6 +59,10 @@ The pipeline performs the following complex calculations:
 
 + Automated Export: Automatically exports the processed data to a timestamped Excel file in the `export/` folder for easy archiving and sharing.
 
+## Documentation
+For complete definitions, formulas, and business logic of all engineered columns, refer to:
+- **[Data Dictionary](docs/DATA_DICTIONARY.md)**: Detailed breakdown of all 68 calculated and engineered columns in the output dataset.
+
 ## Prerequisites
 Python (3.10+) with the following libraries installed
 ```
